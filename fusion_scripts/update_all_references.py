@@ -110,5 +110,56 @@ def run(context):
             return
 
         # Process every design
+        for index, item in enumerate(allFiles, start = 1):
+            dataFile = item[0]
+            folderPath = item[1]
+            
+            print()
+            print("=" * 70)
+            
+            print(f"[{index}/{len(allFiles)}] {dataFile.name}")
+            
+            if folderPath:
+                print(f"Cloud path: {folderPath}")
+            
+            print("=" * 70)
+            
+            document = None
+            
+            try:
+                # Check if the user has the file open
+                if dataFile.isInUse:
+                    print("SKIPPED - file is currently in use.")
+                    
+                    skipped.append((dataFile.name, "File is currently in use."))
+                    continue
+                
+                # Check if the file is read-only
+                if dataFile.isReadOnly:
+                    print("SKIPPED - file is read-only.")
+                    
+                    skipped.append((dataFile.name, "File is read-only."))
+                    continue
+                
+                # Open cloud design
+                print("Opening cloud design")
+                document = app.documents.open(dataFile)
+                
+                if document is None:
+                    raise RuntimeError("Fusion failed to open the document.")
+
+                document.activate()
+                
+                # Convert to Fusion Document
+                fusionDocument = (adsk.fusion.FusionDocument.cast(document))
+                
+                if fusionDocument is None:
+                    raise RuntimeError("The opened document is not a Fusion Document")
+                
+                processed.append(dataFile.name)
+                
+                # Show references
+            except:
+                pass
     except:
         pass
