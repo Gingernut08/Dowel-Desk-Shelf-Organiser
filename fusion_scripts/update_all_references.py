@@ -16,7 +16,7 @@ SHOW_REFERENCES = True
 
 processed = []
 updated = []
-already_current = []
+alreadyCurrent = []
 skipped = []
 failed = []
 
@@ -104,7 +104,7 @@ def run(context):
         if len(allFiles) == 0:
             ui.messageBox(
                 "No .f3d Fusion designs were found "
-                "in this folder or its subfolders."
+                "in this folder or its subfolders"
             )
             
             return
@@ -129,16 +129,16 @@ def run(context):
             try:
                 # Check if the user has the file open
                 if dataFile.isInUse:
-                    print("SKIPPED - file is currently in use.")
+                    print("SKIPPED - file is currently in use")
                     
-                    skipped.append((dataFile.name, "File is currently in use."))
+                    skipped.append((dataFile.name, "File is currently in use"))
                     continue
                 
                 # Check if the file is read-only
                 if dataFile.isReadOnly:
-                    print("SKIPPED - file is read-only.")
+                    print("SKIPPED - file is read-only")
                     
-                    skipped.append((dataFile.name, "File is read-only."))
+                    skipped.append((dataFile.name, "File is read-only"))
                     continue
                 
                 # Open cloud design
@@ -146,7 +146,7 @@ def run(context):
                 document = app.documents.open(dataFile)
                 
                 if document is None:
-                    raise RuntimeError("Fusion failed to open the document.")
+                    raise RuntimeError("Fusion failed to open the document")
 
                 document.activate()
                 
@@ -159,7 +159,92 @@ def run(context):
                 processed.append(dataFile.name)
                 
                 # Show references
-            except:
-                pass
-    except:
-        pass
+                print_references(fusionDocument)
+                
+                # Check reference state
+                print("Checking external references")
+                upToDate = (fusionDocument.isUpToDate)
+                
+                if upToDate:
+                    print("OK - all references are current")
+                    
+                    alreadyCurrent.append(dataFile.name)
+                    continue
+                
+                # Out of date references
+                print("OUT OF DATE - updating references")
+                result = (fusionDocument.updateAllReferences())
+                
+                if not result:
+                    raise RuntimeError("updateAllReferences returned False") 
+                
+                # Give Fusion processing time
+                print("Waiting for Fusion to finish updating references")
+                time.sleep(1)
+                
+                # Verify the update
+                if fusionDocument.isUpToDate:
+                    print("References updated successfully")
+                else:
+                    print("WARNING: Fusion reports out-of-date references")
+                
+                # Check if Fusion actually modified the document
+                if not fusionDocument.isModified:
+                    print("No document changes detected")
+                    
+                    alreadyCurrent.append(dataFile.name)
+                    continue
+                
+                # Save the updated design
+                print("Saving updated Fusion version")
+                
+                saveResult = (fusionDocument.save(SAVE_DESCRIPTION))
+                
+                if not saveResult:
+                    raise RuntimeError("Fusion failed to save the updated document")
+                
+                print("Saved successfully")
+                updated.append(dataFile.name)
+                
+            except Exception as error:
+                print()
+                print("FAILED")
+                print(str(error))
+                
+                failed.append((dataFile.name, folderPath, str(error)))
+            
+            # Close the document without another save
+            if document is not None:
+                try:
+                    document.close(False)
+                except Exception as closeError:
+                    print(f"Could not close document: {str(closeError)}")
+                    pass
+        
+        
+        
+        # FINAL SUMMARY
+        summary = (
+            "External referance update complete\n\n"
+            f"Root folder:\n"
+            f"{sourceFolder.name}\n\n"
+            f"Fusion designs found: {len(allFiles)}\n"
+            f"Processed: {len(processed)}\n"
+            f"Updated and saved: {len(updated)}\n"
+            f"Already current: {len(alreadyCurrent)}\n"
+            f"Skipped: {len(skipped)}\n"
+            f"Failed: {len(failed)}"
+        )
+        
+        # Updated files
+        if updated:
+            summary += ("\n\nUpdated:")
+            for filename in updated:
+                sumary += ("\n + filename")
+    except Exception:
+        errorText = traceback.format_exc()
+        
+        print(errorText)
+        
+        if ui:
+            ui.messageBox(f"Fatal error:\n\n{errorText}")
