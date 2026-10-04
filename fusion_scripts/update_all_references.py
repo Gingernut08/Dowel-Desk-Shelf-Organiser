@@ -70,3 +70,45 @@ def print_references(fusionDocument):
                         pass
     except Exception as error:
         print(f"Could not read references: {str(error)}")
+
+
+# ================================================================================ #
+# MAIN
+# ================================================================================ #
+
+def run(context):
+    app = None
+    ui = None
+    
+    try:
+        app = adsk.core.Application.get()
+        ui = app.userInterface
+        
+        # Get active cloud folder
+        sourceFolder = app.data.activeFolder
+        if sourceFolder is None:
+            ui.messageBox("Could not determine the active Fusion cloud folder")
+            return
+        print("=" * 70)
+        print(f"Root folder: {sourceFolder.name}")
+        
+        # Find Fusion designs recursively
+        print()
+        print("Searching folder and subfolders for design files")
+        allFiles = get_files(sourceFolder)
+        
+        # Sort by folder/home for predictable processing
+        allFiles.sort(key = lambda item:(f"{item[1]}/{item[0].name}").lower())
+        print(f"Found {len(allFiles)} Fusion design files")
+        
+        if len(allFiles) == 0:
+            ui.messageBox(
+                "No .f3d Fusion designs were found "
+                "in this folder or its subfolders."
+            )
+            
+            return
+
+        # Process every design
+    except:
+        pass
