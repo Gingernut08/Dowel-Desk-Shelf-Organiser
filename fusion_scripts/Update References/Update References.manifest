@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "externalReferenceUpdater",
+    "author": "Oliver",
+    "description": {
+        "": "Updates and saves outdated external references in Fusion designs."
+    },
+    "version": "1.0.0",
+    "runOnStartup": false,
+    "supportedOS": "windows",
+    "editEnabled": true
+}
