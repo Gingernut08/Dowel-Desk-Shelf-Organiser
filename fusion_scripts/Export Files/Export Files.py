@@ -18,6 +18,12 @@ EXPORT_3MF = True
 # 3mf quality MeshRefinementLow, MeshRefinementMedium, MeshRefinementHigh
 MESH_REFINEMENT = "MeshRefinementHigh"
 
+refinementDict = {
+    "MeshRefinementLow": adsk.fusion.MeshRefinementSettings.MeshRefinementLow,
+    "MeshRefinementMedium": adsk.fusion.MeshRefinementSettings.MeshRefinementMedium,
+    "MeshRefinementHigh": adsk.fusion.MeshRefinementSettings.MeshRefinementHigh
+}
+
 # Wait after opening document
 WAIT_TIME = 1.0
 
@@ -46,7 +52,7 @@ PANEL_NAME = "Export"
 # RESULTS
 # ================================================================================
 
-found_files = []
+foundFiles = []
 
 processed = []
 stepExported = []
@@ -245,7 +251,122 @@ def export_file(dataFile, folderPath, saveFolder, index, total):
             
             print(f"STEP exported:\n{stepPath}")
             stepExported.append((dataFile.name, stepPath))
+
+        # 3MF EXPORT
         if EXPORT_3MF:
-            pass
+            print("Exporting 3MF")
+            
+            threeMFFilename = (baseName + ".3mf")
+            threeMFPath = get_unique_path(saveFolder, threeMFFilename)
+            
+            threeMFOptions = (exportManager.createC3MFExportOptions(rootComponant, threeMFPath))
+            
+            if threeMFOptions is None:
+                raise RuntimeError("Could not create 3MF export options")
+            
+            # Set mesh refinement
+            try:
+                threeMFOptions.meshRefinement = (refinementDict[MESH_REFINEMENT])
+            except Exception as meshError:
+                print("Could not set mesh refinement")
+                print(str(meshError))
+            
+            # Export one 3MF containing the entire design
+            threeMFOptions.isOneFilePerBody = False
+            
+            # Don't send the file to a print utility
+            threeMFOptions.sendToPrintUtility = False
+            
+            threeMFResult = (exportManager.execute(threeMFOptions))
+            
+            if not threeMFResult:
+                raise RuntimeError("3MF export failed")
+            
+            threeMFExported.append((dataFile.name, threeMFPath))
+            
+            # Successfully processed
+            processed.append(dataFile.name)
+            
+            print("EXPORT COMPLETE")
+    except Exception as error:
+        print()
+        print("EXPORT FAILED")
+        print(str(error))
+        failed.append((dataFile.name, folderPath, str(error)))
+    finally:
+        # Close document
+        if document is not None:
+            try:
+                document.close(False)
+            except Exception as closeError:
+                print("Could not close document:")
+                print(str(closeError))
+
+
+# ================================================================================
+# EXPORT EVERYTHING
+# ================================================================================
+
+def export_all():
+    global foundFiles, processed, stepExported, threeMFExported, skipped, failed
+    
+    foundFiles = []
+    
+    processed = []
+    stepExported = []
+    threeMFExported = []
+    
+    skipped = []
+    failed = []
+    
+    try:
+        app = adsk.core.Application.get()
+        ui = app.userInterface
+        
+        # Get active Fusion cloud folder
+        sourceFolder = (app.data.activeFolder)
+        
+        if sourceFolder is None:
+            ui.messageBox("Could not determine the active Fusion cloud folder")
+            return
+        
+        print()
+        print("=" * 70)
+        
+        print("EXPORT ALL FUSION FILES")
+        
+        print("=" * 70)
+        
+        print(f"Source folder: {sourceFolder.name}")
+        
+        # Get local output folder
+        saveFolder = get_output_folder()
+        
+        print(f"Save folder: {saveFolder}")
+        
+        # Find all F3D files
+        print()
+        print("Searching for .f3d files")
+        
+        foundFiles = get_files(sourceFolder)
+        
+        foundFiles.sort(key = lambda item: f"{item[0]}/{item[0].name}".lower())
+        
+        print(f"Found {len(foundFiles)} Fusion files")
+        
+        if len(foundFiles) == 0:
+            ui.messageBox("No .f3d files were found in the active folder or subfolders")
+            return
+        
+        # Export every file
+        total = len(foundFiles)
+        
+        for index, item in enumerate(foundFiles, start = 1):
+            dataFile = item[0]
+            folderPath = item[1]
+            
+            export_file(dataFile, folderPath, saveFolder, index, total)
+        
+        # FINAL SUMMARY
     except:
         pass
