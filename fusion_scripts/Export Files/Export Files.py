@@ -368,5 +368,54 @@ def export_all():
             export_file(dataFile, folderPath, saveFolder, index, total)
         
         # FINAL SUMMARY
-    except:
-        pass
+        summary = (
+                    "External reference update complete\n\n"
+                    f"Source folder:\n"
+                    f"{sourceFolder.name}\n\n"
+                    f"F3D found: {len(foundFiles)}\n"
+                    f"Successfully processed: {len(processed)}\n"
+                    f"STEP files exported: {len(stepExported)}\n"
+                    f"3MF files exported: {len(threeMFExported)}\n"
+                    f"Skipped: {len(skipped)}\n"
+                    f"Failed: {len(failed)}\n\n"
+                    f"Save folder:\n"
+                    f"{saveFolder}"
+                )
+        
+        # Skipped
+        if skipped:
+            summary += "\n\nSkipped:"
+            for filename, reason in skipped:
+                summary += (f"\n {filename} - {reason}")
+        
+        # Failed
+        if failed:
+            summary += "\n\nFailed"
+            for filename, folder, error in failed:
+                summary += (f"\n {filename}")
+                
+                if folder:
+                    summary += (f"\n Folder: {folder}")
+                
+                summary += (f"\n Error: {error}")
+        
+        print()
+        print("=" * 70)
+        print("COMPLETE")
+        print("=" * 70)
+        
+        print(summary)
+        
+        ui.messageBox(summary)
+        
+    except Exception:
+        errorText = traceback.format_exc()
+        
+        print(errorText)
+        
+        ui.messageBox(f"Fatal error:\n\n{errorText}")
+
+
+# ================================================================================
+# COMMAND CREATED HANDLER
+# ================================================================================
